@@ -1,5 +1,9 @@
 #include "rssparser.h"
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "3rd-party/catch.hpp"
 
 #include "cache.h"
@@ -242,5 +246,63 @@ TEST_CASE("parse() extracts best enclosure", "[RssParser]")
 		REQUIRE(feed->items()[0]->enclosure_type() == "image/jpg");
 		REQUIRE(feed->items()[0]->enclosure_description() == "description2");
 		REQUIRE(feed->items()[0]->enclosure_description_mime_type() == "text/plain");
+	}
+}
+
+TEST_CASE("parse() drops items that match `ignore-article` rules", "[RssParser]")
+{
+	ConfigContainer cfg;
+	auto rsscache = Cache::in_memory(cfg);
+	const std::string feedurl = "https://example.com/feed.xml";
+
+	rsspp::Feed upstream_feed;
+	upstream_feed.rss_version = rsspp::Feed::ATOM_1_0;
+	for (const std::string title : {
+			"Monday news", "Tuesday news", "Weekly digest", "Friday news"
+		}) {
+		rsspp::Item item;
+		item.guid = title;
+		item.title = title;
+		upstream_feed.items.push_back(item);
+	}
+
+	const auto titles = [](const std::shared_ptr<RssFeed>& f) {
+		std::vector<std::string> result;
+		for (const auto& item : f->items()) {
+			result.push_back(item->title());
+		}
+		return result;
+	};
+
+	SECTION("All items are kept when there is no ignore list") {
+		RssParser parser(feedurl, *rsscache, cfg, nullptr);
+		const auto feed = parser.parse(upstream_feed);
+		REQUIRE(feed != nullptr);
+		REQUIRE(feed->total_item_count() == 4);
+	}
+
+	SECTION("Exact URL, `*` and regex rules are applied; order is preserved") {
+		RssIgnores ignores;
+		ignores.handle_action("ignore-article", {feedurl, "title = \"Monday news\""});
+		ignores.handle_action("ignore-article", {"*", "title = \"Friday news\""});
+		ignores.handle_action("ignore-article", {"regex:^https://example\\.com/", "title =~ \"digest\""});
+		ignores.handle_action("ignore-article", {"regex:example\\.org", "title =~ \".*\""});
+
+		RssParser parser(feedurl, *rsscache, cfg, &ignores);
+		const auto feed = parser.parse(upstream_feed);
+		REQUIRE(feed != nullptr);
+		REQUIRE(titles(feed) == std::vector<std::string> {"Tuesday news"});
+	}
+
+	SECTION("Rules for other feeds are not applied") {
+		RssIgnores ignores;
+		ignores.handle_action("ignore-article", {"https://example.org/other.xml", "title =~ \".*\""});
+
+		RssParser parser(feedurl, *rsscache, cfg, &ignores);
+		const auto feed = parser.parse(upstream_feed);
+		REQUIRE(feed != nullptr);
+		REQUIRE(titles(feed) == std::vector<std::string> {
+			"Monday news", "Tuesday news", "Weekly digest", "Friday news"
+		});
 	}
 }

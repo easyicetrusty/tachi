@@ -1,7 +1,9 @@
 #include "cache.h"
 
 #include <memory>
+#include <set>
 #include <sstream>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -1207,4 +1209,68 @@ TEST_CASE("Ignoring articles in search", "[Cache]")
 
 	REQUIRE(search_items.size() == 0 );
 	REQUIRE(no_ignore_items.size() == 1);
+}
+
+TEST_CASE("internalize_rssfeed() drops items that match `ignore-article` rules",
+	"[Cache]")
+{
+	ConfigContainer cfg;
+	auto rsscache = Cache::in_memory(cfg);
+	const std::string feedurl = "https://example.com/feed.xml";
+
+	RssFeed feed(rsscache.get(), feedurl);
+	for (const std::string title : {
+			"Monday news", "Tuesday news", "Weekly digest", "Friday news"
+		}) {
+		auto item = std::make_shared<RssItem>(rsscache.get());
+		item->set_guid(title);
+		item->set_title(title);
+		item->set_link("https://example.com/" + title);
+		item->set_description("", "");
+		item->set_feedurl(feedurl);
+		feed.add_item(item);
+	}
+	rsscache->externalize_rssfeed(feed, false);
+
+	const auto titles = [](const std::shared_ptr<RssFeed>& f) {
+		std::set<std::string> result;
+		for (const auto& item : f->items()) {
+			result.insert(item->title());
+		}
+		return result;
+	};
+
+	RssIgnores ign;
+
+	SECTION("All items are kept when there is no ignore list") {
+		const auto loaded = rsscache->internalize_rssfeed(feedurl, nullptr);
+		REQUIRE(loaded->total_item_count() == 4);
+	}
+
+	SECTION("Rules for other feeds are not applied") {
+		ign.handle_action("ignore-article", {"https://example.org/other.xml", "title =~ \".*\""});
+		ign.handle_action("ignore-article", {"regex:example\\.org", "title =~ \".*\""});
+
+		const auto loaded = rsscache->internalize_rssfeed(feedurl, &ign);
+		REQUIRE(loaded->total_item_count() == 4);
+	}
+
+	SECTION("Exact URL, `*` and regex rules are applied") {
+		ign.handle_action("ignore-article", {feedurl, "title = \"Monday news\""});
+		ign.handle_action("ignore-article", {"*", "title = \"Tuesday news\""});
+		ign.handle_action("ignore-article", {"regex:^https://example\\.com/", "title =~ \"digest\""});
+
+		const auto loaded = rsscache->internalize_rssfeed(feedurl, &ign);
+		REQUIRE(titles(loaded) == std::set<std::string> {"Friday news"});
+	}
+
+	SECTION("An item is kept if a rule can't be evaluated for it") {
+		ign.handle_action("ignore-article", {feedurl, "title = \"Monday news\""});
+		ign.handle_action("ignore-article", {"*", "no_such_attribute = \"x\""});
+
+		const auto loaded = rsscache->internalize_rssfeed(feedurl, &ign);
+		REQUIRE(titles(loaded) == std::set<std::string> {
+			"Tuesday news", "Weekly digest", "Friday news"
+		});
+	}
 }

@@ -298,3 +298,80 @@ TEST_CASE("RssIgnores::matches() returns true if given RssItem matches any "
 		REQUIRE(ignores.matches(&item));
 	}
 }
+
+TEST_CASE("RssIgnores::matches() applies a rule only to feeds whose URL "
+	"matches the rule",
+	"[RssIgnores]")
+{
+	RssIgnores ignores;
+
+	ConfigContainer cfg;
+	auto rsscache = Cache::in_memory(cfg);
+
+	RssItem first(rsscache.get());
+	first.set_title("Updates");
+	first.set_feedurl("https://example.com/feed.xml");
+
+	RssItem second(rsscache.get());
+	second.set_title("Updates");
+	second.set_feedurl("http://example.org/news.rss");
+
+	SECTION("Exact URL") {
+		ignores.handle_action("ignore-article", {"https://example.com/feed.xml", "title = \"Updates\""});
+
+		REQUIRE(ignores.matches(&first));
+		REQUIRE_FALSE(ignores.matches(&second));
+	}
+
+	SECTION("Regex, checked against items of different feeds in turn") {
+		ignores.handle_action("ignore-article", {"regex:^https://", "title = \"Updates\""});
+
+		REQUIRE(ignores.matches(&first));
+		REQUIRE_FALSE(ignores.matches(&second));
+		REQUIRE(ignores.matches(&first));
+	}
+
+	SECTION("Regex is case-insensitive") {
+		ignores.handle_action("ignore-article", {"regex:EXAMPLE\\.ORG", "title = \"Updates\""});
+
+		REQUIRE_FALSE(ignores.matches(&first));
+		REQUIRE(ignores.matches(&second));
+	}
+
+	SECTION("Regex matches the feed, but the expression doesn't match the item") {
+		ignores.handle_action("ignore-article", {"regex:example", "title = \"Other\""});
+
+		REQUIRE_FALSE(ignores.matches(&first));
+		REQUIRE_FALSE(ignores.matches(&second));
+	}
+
+	SECTION("`*` applies to every feed, but only to matching items") {
+		ignores.handle_action("ignore-article", {"*", "title = \"Updates\""});
+
+		REQUIRE(ignores.matches(&first));
+		REQUIRE(ignores.matches(&second));
+
+		second.set_title("Other");
+		REQUIRE_FALSE(ignores.matches(&second));
+	}
+
+	SECTION("Exact URL, `*` and regex rules together") {
+		ignores.handle_action("ignore-article", {"https://example.com/feed.xml", "title = \"Monday\""});
+		ignores.handle_action("ignore-article", {"*", "title = \"Tuesday\""});
+		ignores.handle_action("ignore-article", {"regex:example\\.org", "title = \"Wednesday\""});
+
+		first.set_title("Monday");
+		REQUIRE(ignores.matches(&first));
+		first.set_title("Tuesday");
+		REQUIRE(ignores.matches(&first));
+		first.set_title("Wednesday");
+		REQUIRE_FALSE(ignores.matches(&first));
+
+		second.set_title("Monday");
+		REQUIRE_FALSE(ignores.matches(&second));
+		second.set_title("Tuesday");
+		REQUIRE(ignores.matches(&second));
+		second.set_title("Wednesday");
+		REQUIRE(ignores.matches(&second));
+	}
+}
