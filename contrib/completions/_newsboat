@@ -9,7 +9,6 @@ _arguments : \
   '--export-to-opml2[export feeds as OPML2 to stdout]' \
   '(-X --vacuum)'{-X,--vacuum}'[compact the cache]' \
   '--cleanup[remove unreferenced entries from the cache and quit]' \
-  '(-i --import-from-opml)'{-i,--import-from-opml=}'[import an OPML file]:OPML file:_files' \
   '(-u --url-file)'{-u,--url-file=}'[use an alternative URL file]:URL file:_files' \
   '(-c --cache-file)'{-c,--cache-file=}'[use an alternative cache file]:cache file:_files' \
   '(-C --config-file)'{-C,--config-file=}'[use an alternative configuration file]:config file:_files' \

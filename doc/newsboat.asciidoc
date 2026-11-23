@@ -192,62 +192,10 @@ confuse the poor program like that!
 
 === Other readers (via OPML)
 
-The vast amount of RSS feed readers allows the export of subscriptions via OPML
-files. OPML is an XML file format that was designed to save outlines, and has
-found its primary use in the import and export of feed subscriptions between
-different RSS feed readers.
-
-The best thing to start with is to export your subscriptions from the old
-reader.  Usually, RSS feed readers have appropriate menu items available to do
-so.
-
-Snownews 1.7+ stores its subscriptions natively in OPML, in
-_~/.config/snownews/urls.opml_. Earlier versions provide an export script:
-
-	snow2opml > ~/blogroll.opml
-
-To export the subscription list from raggle, the following command is
-necessary:
-
-	raggle --export-opml ~/blogroll.opml
-
-You can then import subscriptions into Newsboat:
-
-	newsboat -i ~/blogroll.opml
-
-Don't worry, Newsboat won't destroy your existing configuration, or add
-subscriptions more than once: every URL that is added to the subscription list
-is checked before whether it is already in the list, and is only added if not.
-This makes it possible to merge several OPML files into your subscription list.
-
-If your old RSS feed reader was able to structure your subscriptions in
-hierarchies, and reflected this structure in the exported OPML file, Newsboat
-doesn't throw away this information (although it doesn't support hierarchies), but
-generates tags from it. Tags are Newsboat's way of organizing subscriptions
-in a non-hierarchical way. More information on the use of tags can be found below.
-
-Imagine the following folder hierarchy:
-
-	|- News
-	| |- Europe
-	| `- International
-	|- IT
-	| |- Linux
-	| |- Windows
-	| `- Programming
-	|   |- C++
-	|   |- Ruby
-	|   `- Erlang
-	`- Private
-
-Subscriptions found in the folder "Private" will be tagged with "Private",
-subscriptions in the folder "International" will be tagged with "News" and
-"News/International", subscriptions in the folder "Erlang" will be tagged ith
-"IT", "IT/Programming" and "IT/Programming/Erlang", and so on. This means that
-when you select the tag "Programming" in Newsboat, you will see all
-subscriptions that were in the "Programming" folder or one of its subfolders
-before. This means that you will lose virtually nothing of your previously
-configured structure.
+tachi does not import OPML files: an imported subscription list is outside
+data that ends up in your urls file. To move from another reader, export its
+subscriptions and copy the feed URLs into the _urls_ file yourself, one per
+line. Exporting from Newsboat to OPML (`-e`, `--export-to-opml2`) still works.
 
 == Newsboat as a Client for Newsreading Services
 
@@ -710,22 +658,6 @@ removed with:
 Miniflux categories are converted into Newsboat tags. You can select and filter
 feeds by tags; see <<_tagging>> and <<_filter_language>> for details.
 
-=== OPML Online Subscription Mode
-
-This mode provides one-way synchronization of subscriptions from the online
-service to Newsboat. In other words, Newsboat will know what feeds you've
-subscribed to, but the online service won't know what feeds you're reading in
-Newsboat.
-
-This mode works with any service that publishes your subscriptions in OPML
-format.
-
-To enable this mode, you need to set an appropriate URLs source and then tell
-Newsboat where to get the OPML file(s):
-
-	urls-source "opml"
-	opml-url "https://example.com/feeds.opml" "https://example.com/more.opml"
-
 === Passwords for external APIs
 
 include::chapter-password.asciidoc[]
@@ -737,10 +669,6 @@ include::chapter-password.asciidoc[]
 
 include::chapter-tagging.asciidoc[]
 
-
-=== Scripts and Filters (Snownews Extensions)
-
-include::chapter-snownews.asciidoc[]
 
 === Bookmarking
 

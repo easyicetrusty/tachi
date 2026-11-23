@@ -104,7 +104,7 @@ important bit.
 +
     browser "~/bin/newsboat-browser.sh"
 
-== With Snap, I can't start browser/bookmarking script/exec:/filter:/run program from macro
+== With Snap, I can't start browser/bookmarking script/run program from macro
 
 Newsboat's Snap uses strict confinement, so the only program that Newsboat can
 invoke is `xdg-open`. This is a tradeoff we make to gain better security.

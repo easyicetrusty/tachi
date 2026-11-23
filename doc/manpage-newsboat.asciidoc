@@ -9,7 +9,7 @@ newsboat - an RSS/Atom feed reader for text terminals
 
 == SYNOPSIS
 
-*newsboat* [*-r*] [*-e*] [*-i* _opmlfile_] [*-u* _urlfile_] [*-c* _cachefile_] [*-C* _configfile_] [*-X*] [*-o*] [*-x* _command_...] [*-h*]
+*newsboat* [*-r*] [*-e*] [*-u* _urlfile_] [*-c* _cachefile_] [*-C* _configfile_] [*-X*] [*-o*] [*-x* _command_...] [*-h*]
 
 
 == DESCRIPTION
@@ -54,8 +54,9 @@ the _urls_ file).
 *-v*, *-V*, *--version*::
         Get version information about Newsboat and the libraries it uses
 
-*-i* _opmlfile_, *--import-from-opml*=_opmlfile_::
-       Import an OPML file
+*-i*, *--import-from-opml*::
+       Removed in tachi. Prints an error and exits with a failure code; no
+       file is read. tachi does not import OPML.
 
 *-u* _urlfile_, *--url-file*=_urlfile_::
        Use an alternative URL file
@@ -124,10 +125,6 @@ include::chapter-dialog-titles.asciidoc[]
 == TAGGING
 
 include::chapter-tagging.asciidoc[]
-
-== SCRIPTS AND FILTERS
-
-include::chapter-snownews.asciidoc[]
 
 == KILLFILES
 

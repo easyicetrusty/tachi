@@ -262,7 +262,6 @@ doc/cmdline-commands-linked.asciidoc: doc/cmdline-commands.dsv
 	awk -f doc/createAvailableCommandlineCommandsListView.awk doc/cmdline-commands.dsv > doc/cmdline-commands-linked.asciidoc
 
 doc/xhtml/newsboat.html: doc/chapter-tagging.asciidoc
-doc/xhtml/newsboat.html: doc/chapter-snownews.asciidoc
 doc/xhtml/newsboat.html: doc/chapter-firststeps.asciidoc
 doc/xhtml/newsboat.html: doc/chapter-cmdline.asciidoc
 doc/xhtml/newsboat.html: doc/chapter-configuration.asciidoc
@@ -290,7 +289,7 @@ doc/newsboat-keycmds.asciidoc: doc/keycmds.dsv
 
 doc/$(NEWSBOAT).1: doc/manpage-newsboat.asciidoc doc/chapter-firststeps.asciidoc \
 		doc/newsboat-cfgcmds.asciidoc doc/newsboat-keycmds.asciidoc \
-		doc/chapter-tagging.asciidoc doc/chapter-snownews.asciidoc \
+		doc/chapter-tagging.asciidoc \
 		doc/chapter-cmdline.asciidoc doc/chapter-configuration.asciidoc \
 		doc/chapter-environment-variables.asciidoc \
 		doc/chapter-files.asciidoc doc/chapter-format-strings.asciidoc \
@@ -379,7 +378,6 @@ install-examples: doc/example-config
 	$(MKDIR) $(DESTDIR)$(docdir)/examples
 	$(INSTALL) -m 644 doc/example-config $(DESTDIR)$(docdir)/examples/config
 	$(INSTALL) -m 755 doc/examples/example-bookmark-plugin.sh $(DESTDIR)$(docdir)/examples/example-bookmark-plugin.sh
-	$(INSTALL) -m 755 doc/examples/example-exec-script.py $(DESTDIR)$(docdir)/examples/example-exec-script.py
 
 install-icon:
 	$(MKDIR) $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps

@@ -4,13 +4,12 @@ After you've installed Newsboat, you can run it for the first time by typing
 `newsboat` on your command prompt. This will bring you the following message:
 
 ----
-Error: no URLs configured. Please fill the file /home/ak/.newsboat/urls with RSS feed URLs or import an OPML file.
+Error: no URLs configured. Please fill the file /home/ak/.newsboat/urls with RSS feed URLs.
 
 Newsboat 2.22
-usage: ./newsboat [-i <file>|-e] [-u <urlfile>] [-c <cachefile>] [-x <command> ...] [-h]
+usage: ./newsboat [-e] [-u <urlfile>] [-c <cachefile>] [-x <command> ...] [-h]
     -e, --export-to-opml            export OPML feed to stdout
     -r, --refresh-on-start          refresh feeds on start
-    -i, --import-from-opml=<file>   import OPML file
     -u, --url-file=<urlfile>        read RSS feed URLs from <urlfile>
     -c, --cache-file=<cachefile>    use <cachefile> as cache file
     -C, --config-file=<configfile>  read configuration from <configfile>
@@ -36,7 +35,7 @@ configuration file:
 	http://rss.cnn.com/rss/cnn_topstories.rss
 	http://newsrss.bbc.co.uk/rss/newsonline_world_edition/front_page/rss.xml
 
-You can also import an OPML file by running `newsboat -i blogroll.opml`
+tachi does not import OPML files; add the URLs to the _urls_ file directly.
 
 
 ****
