@@ -27,8 +27,9 @@ Branch `main` is upstream master at commit `e234ad07` plus two changes.
 The `#2101` and `#345` in commit messages refer to those upstream issue
 numbers, not to issues in this repository.
 
-Upstream tags are kept. To follow upstream, rebase `main` on a newer
-upstream master.
+tachi is now independent software. It does not track upstream newsboat
+and will not be rebased on newer upstream releases. Upstream tags are kept
+for history.
 
 ## Build the RPM
 
