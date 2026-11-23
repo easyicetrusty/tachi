@@ -56,7 +56,8 @@ The packaging lives in `tachi/`. The spec is based on Fedora's newsboat
 spec, built from a `git archive` of the current commit, with Fedora's three
 packaging patches and one small patch that sets the version string.
 
-On a Fedora 45 build host or container (this is how tachi1 was built):
+On a Fedora 45 build host or container (this is how tachi1 and tachi2 were
+built):
 
     sudo dnf install git-core rpm-build cargo-rpm-macros
     tachi/make-srpm.sh ~/tachi-rpmbuild
@@ -66,8 +67,13 @@ On a Fedora 45 build host or container (this is how tachi1 was built):
     rpmbuild -ba --define "_topdir $HOME/tachi-rpmbuild" ~/tachi-rpmbuild/SPECS/newsboat.spec
 
 `mock -r fedora-45-x86_64 --rebuild` on the SRPM should also work, but it
-was not tried for tachi1.
+was not tried for tachi1 or tachi2.
 
-The version is `2.45.1^<date>git<commit>` with release `1.<dist>.tachi1`,
-so it sorts above Fedora's 2.45.1 and below the next upstream release.
+The version is `2.45.1^<date>.<n>git<commit>` with release
+`1.<dist>.tachi2`. `<n>` counts the commits made on `<date>` (UTC), so two
+builds from the same day still sort in commit order: rpm compares the
+version before the release, and the commit hash alone sorts at random.
+tachi1 used `2.45.1^<date>git<commit>`; any `<date>.<n>` version sorts
+above it. All tachi versions sort above Fedora's 2.45.1 and below the next
+upstream release.
 `newsboat -v` shows the git describe of the commit plus `-tachi`.

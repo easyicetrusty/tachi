@@ -6,13 +6,15 @@
 %global shortcommit @SHORT@
 %global commitdate  @DATE@
 %global gitdescribe @DESCRIBE@
+# Commits made on commitdate (UTC): same-day builds sort in commit order
+%global snapnum     @SNAPNUM@
 
 # Not all test dependencies are packaged for fedora
 %bcond check 0
 
 Name:    newsboat
-Version: 2.45.1^%{commitdate}git%{shortcommit}
-Release: 1%{?dist}.tachi1
+Version: 2.45.1^%{commitdate}.%{snapnum}git%{shortcommit}
+Release: 1%{?dist}.tachi2
 Summary: RSS/Atom feed reader for the text console (tachi build)
 
 License: MIT
@@ -53,6 +55,8 @@ Newsboat is a fork of Newsbeuter, an RSS/Atom feed reader for the text console.
 This is tachi, a fork of upstream newsboat master with two changes: a fix
 for crashes when the feed list moves during a reload (upstream newsboat
 issue 2101) and faster ignore-article rules (upstream newsboat issue 345).
+tachi also removes OPML import and the exec: and filter: feed types, which
+let outside data run commands. OPML export still works.
 tachi is not affiliated with or supported by the newsboat project.
 
 %prep
@@ -115,8 +119,19 @@ find %{buildroot}%{_pkgdocdir}/ -type f -exec chmod -x '{}' +
 %{_datadir}/zsh/site-functions/_newsboat
 
 %changelog
-* @CLDATE@ easyicetrusty <126975333+easyicetrusty@users.noreply.github.com> - 2.45.1^@DATE@git@SHORT@-1.tachi1
-- tachi: build upstream master @DESCRIBE@ with two local changes
+* @CLDATE@ easyicetrusty <126975333+easyicetrusty@users.noreply.github.com> - 2.45.1^@DATE@.@SNAPNUM@git@SHORT@-1.tachi2
+- tachi2: build tachi @DESCRIBE@
+- Remove OPML import: -i/--import-from-opml now prints "OPML import is
+  not supported in tachi" and exits non-zero; urls-source "opml" is
+  refused at start-up. OPML export is kept.
+- Remove exec: and filter: feeds: such lines in the urls file are
+  skipped with an error and their commands are never run. query: feeds
+  are kept.
+- Version gains a same-day snapshot counter (^date.N) so that a build of
+  a later commit sorts above an earlier one made the same day
+
+* Mon Nov 23 2026 easyicetrusty <126975333+easyicetrusty@users.noreply.github.com> - 2.45.1^20261123git04fc9170-1.tachi1
+- tachi: build upstream master r2.45-66-g04fc9 with two local changes
 - Fix crashes when the feed list is moved during a reload: lock
   ListWidgetBackend and Stfl::Form against reload threads (upstream
   newsboat issue 2101)
