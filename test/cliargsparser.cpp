@@ -41,77 +41,36 @@ TEST_CASE(
 	}
 }
 
-TEST_CASE(
-	"Sets `do_import` and `importfile` if -i/--import-from-opml is "
-	"provided",
+TEST_CASE("Refuses -i/--import-from-opml: tachi does not import OPML",
 	"[CliArgsParser]")
 {
-	const auto filename = "blogroll.opml"_path;
-
-	auto check = [&filename](test_helpers::Opts opts) {
-		CliArgsParser args(opts.argc(), opts.argv());
-
-		REQUIRE(args.do_import());
-		REQUIRE(args.importfile() == filename);
-	};
-
-	SECTION("-i") {
-		check({"newsboat", "-i", filename.to_locale_string()});
-	}
-
-	SECTION("--import-from-opml") {
-		check({"newsboat", "--import-from-opml=" + filename.to_locale_string()});
-	}
-}
-
-TEST_CASE("Resolves tilde to homedir in -i/--import-from-opml",
-	"[CliArgsParser]")
-{
-	test_helpers::TempDir tmp;
-
-	test_helpers::EnvVar home("HOME");
-	home.set(tmp.get_path().to_locale_string());
-
-	const auto filename = "feedlist.opml"_path;
-	const std::string arg = std::string("~/") + filename.to_locale_string();
-
-	auto check = [&filename, &tmp](test_helpers::Opts opts) {
-		CliArgsParser args(opts.argc(), opts.argv());
-
-		REQUIRE(args.do_import());
-		REQUIRE(args.importfile() == tmp.get_path().join(filename));
-	};
-
-	SECTION("-i") {
-		check({"newsboat", "-i", arg});
-	}
-
-	SECTION("--import-from-opml") {
-		check({"newsboat", "--import-from-opml", arg});
-	}
-}
-
-TEST_CASE(
-	"Asks to print usage and exit with failure if both "
-	"-i/--import-from-opml and -e/--export-to-opml are provided",
-	"[CliArgsParser]")
-{
-	const std::string importf("import.opml");
-	const std::string exportf("export.opml");
-
 	auto check = [](test_helpers::Opts opts) {
 		CliArgsParser args(opts.argc(), opts.argv());
 
-		REQUIRE(args.should_print_usage());
+		REQUIRE_FALSE(args.should_print_usage());
 		REQUIRE(args.return_code() == EXIT_FAILURE);
+		REQUIRE(args.display_msg() ==
+			"Error: OPML import is not supported in tachi");
 	};
 
-	SECTION("-i first") {
-		check({"newsboat", "-i", importf, "-e", exportf});
+	SECTION("-i with a file") {
+		check({"newsboat", "-i", "blogroll.opml"});
 	}
 
-	SECTION("-e first") {
-		check({"newsboat", "-e", exportf, "-i", importf});
+	SECTION("-i without a file") {
+		check({"newsboat", "-i"});
+	}
+
+	SECTION("--import-from-opml=file") {
+		check({"newsboat", "--import-from-opml=blogroll.opml"});
+	}
+
+	SECTION("--import-from-opml with a URL") {
+		check({"newsboat", "--import-from-opml", "https://example.com/feeds.opml"});
+	}
+
+	SECTION("-i together with -e") {
+		check({"newsboat", "-e", "-i", "import.opml"});
 	}
 }
 

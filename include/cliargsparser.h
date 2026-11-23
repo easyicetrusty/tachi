@@ -15,8 +15,6 @@ public:
 	CliArgsParser(int argc, char* argv[]);
 	~CliArgsParser() = default;
 
-	bool do_import() const;
-
 	bool do_export() const;
 
 	bool export_as_opml2() const;
@@ -24,8 +22,6 @@ public:
 	bool do_vacuum() const;
 
 	bool do_cleanup() const;
-
-	Filepath importfile() const;
 
 	/// If non-null, Newsboat should import read articles info from this
 	/// filepath.

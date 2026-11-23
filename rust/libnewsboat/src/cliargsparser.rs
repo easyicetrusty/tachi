@@ -19,9 +19,6 @@ pub struct CliArgsParser {
     pub show_version: usize,
     pub silent: bool,
 
-    /// If this contains some value, it's the path to the OPML file that should be imported.
-    pub importfile: Option<PathBuf>,
-
     /// If this contains some value, it's the path to the file from which the list of read articles
     /// should be imported.
     pub readinfo_import_file: Option<PathBuf>,
@@ -121,6 +118,8 @@ pub enum CliParseError {
     LexoptError(lexopt::Error),
     InvalidLogLevel(String),
     PrintAndExit,
+    /// `-i`/`--import-from-opml` was given. tachi does not import OPML.
+    OpmlImportRemoved,
 }
 
 impl std::fmt::Display for CliParseError {
@@ -129,6 +128,7 @@ impl std::fmt::Display for CliParseError {
             CliParseError::LexoptError(lexopt) => write!(f, "{lexopt}"),
             CliParseError::InvalidLogLevel(log_message) => write!(f, "{log_message}"),
             CliParseError::PrintAndExit => write!(f, "Erroneous command line arguments"),
+            CliParseError::OpmlImportRemoved => write!(f, "{}", opml_import_removed_message()),
         }
     }
 }
@@ -137,6 +137,11 @@ impl From<lexopt::Error> for CliParseError {
     fn from(err: lexopt::Error) -> CliParseError {
         CliParseError::LexoptError(err)
     }
+}
+
+/// The message printed when someone asks tachi to import an OPML file.
+pub fn opml_import_removed_message() -> String {
+    gettext("Error: OPML import is not supported in tachi")
 }
 
 /// Parses command line arguments and stores them in parameter args.
@@ -154,8 +159,8 @@ pub fn parse_cliargs(opts: Vec<OsString>, args: &mut CliArgsParser) -> Result<()
     while let Some(arg) = parser.next()? {
         match arg {
             Short('i') | Long("import-from-opml") => {
-                let import_file_str = parser.value()?;
-                args.importfile = resolve_path(&import_file_str);
+                // tachi removed OPML import: an imported file could add feeds that run commands.
+                return Err(CliParseError::OpmlImportRemoved);
             }
             Short('e') | Long("export-to-opml") => {
                 args.do_export = true;
@@ -244,10 +249,6 @@ pub fn parse_cliargs(opts: Vec<OsString>, args: &mut CliArgsParser) -> Result<()
         }
     }
 
-    if args.do_export && args.importfile.is_some() {
-        return Err(CliParseError::PrintAndExit);
-    }
-
     if args.readinfo_import_file.is_some() && args.readinfo_export_file.is_some() {
         return Err(CliParseError::PrintAndExit);
     }
@@ -279,6 +280,9 @@ impl CliArgsParser {
                     }
                     CliParseError::PrintAndExit => {
                         args.should_print_usage = true;
+                    }
+                    CliParseError::OpmlImportRemoved => {
+                        args.display_msg = opml_import_removed_message();
                     }
                 }
                 args.return_code = Some(EXIT_FAILURE);
@@ -318,46 +322,33 @@ mod tests {
     }
 
     #[test]
-    fn t_sets_do_import_and_importfile_if_dash_i_is_provided() {
-        let filename = "blogroll.opml";
-
+    fn t_refuses_opml_import_with_dash_i() {
         let check = |opts| {
             let args = CliArgsParser::new(opts);
-            assert_eq!(args.importfile, Some(PathBuf::from(filename)));
-        };
-
-        check(vec!["newsboat".into(), "-i".into(), filename.into()]);
-        check(vec![
-            "newsboat".into(),
-            format!("--import-from-opml={filename}").into(),
-        ]);
-    }
-
-    #[test]
-    fn t_asks_to_print_usage_and_exit_with_failure_if_both_import_and_export_are_provided() {
-        let importf: OsString = "import.opml".into();
-        let exportf: OsString = "export.opml".into();
-
-        let check = |opts| {
-            let args = CliArgsParser::new(opts);
-
-            assert!(args.should_print_usage);
+            assert!(!args.should_print_usage);
             assert_eq!(args.return_code, Some(EXIT_FAILURE));
+            assert_eq!(
+                args.display_msg,
+                "Error: OPML import is not supported in tachi"
+            );
         };
 
+        check(vec!["newsboat".into(), "-i".into(), "blogroll.opml".into()]);
+        check(vec!["newsboat".into(), "-i".into()]);
         check(vec![
             "newsboat".into(),
-            "-i".into(),
-            importf.clone(),
-            "-e".into(),
-            exportf.clone(),
+            "--import-from-opml=blogroll.opml".into(),
+        ]);
+        check(vec![
+            "newsboat".into(),
+            "--import-from-opml".into(),
+            "https://example.com/feeds.opml".into(),
         ]);
         check(vec![
             "newsboat".into(),
             "-e".into(),
-            exportf,
             "-i".into(),
-            importf,
+            "blogroll.opml".into(),
         ]);
     }
 

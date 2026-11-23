@@ -48,7 +48,6 @@ void print_usage(const std::string& argv0, const ConfigPaths& configpaths)
 		{'e', "export-to-opml", "", _s("export OPML feed to stdout")},
 		{'-', "export-to-opml2", "", _s("export OPML 2.0 feed including tags to stdout")},
 		{'r', "refresh-on-start", "", _s("refresh feeds on start")},
-		{'i', "import-from-opml", _s("<file>"), _s("import OPML file")},
 		{
 			'u',
 			"url-file",

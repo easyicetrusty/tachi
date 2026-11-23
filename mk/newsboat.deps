@@ -44,7 +44,6 @@ src/ocnewsapi.cpp
 src/oldreaderapi.cpp
 src/oldreaderurlreader.cpp
 src/opml.cpp
-src/opmlurlreader.cpp
 src/queuemanager.cpp
 src/regexmanager.cpp
 src/regexowner.cpp

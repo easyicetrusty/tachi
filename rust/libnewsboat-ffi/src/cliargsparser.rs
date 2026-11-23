@@ -35,7 +35,6 @@ mod bridged {
 
         fn create(argv: Vec<BytesVec>) -> Box<CliArgsParser>;
 
-        fn do_import(cliargsparser: &CliArgsParser) -> bool;
         fn do_export(cliargsparser: &CliArgsParser) -> bool;
         fn export_as_opml2(cliargsparser: &CliArgsParser) -> bool;
         fn do_vacuum(cliargsparser: &CliArgsParser) -> bool;
@@ -46,7 +45,6 @@ mod bridged {
         fn should_print_usage(cliargsparser: &CliArgsParser) -> bool;
         fn refresh_on_start(cliargsparser: &CliArgsParser) -> bool;
 
-        fn importfile(cliargsparser: &CliArgsParser, mut file: Pin<&mut PathBuf>);
         fn program_name(cliargsparser: &CliArgsParser) -> String;
         fn display_msg(cliargsparser: &CliArgsParser) -> String;
 
@@ -80,10 +78,6 @@ fn create(argv: Vec<bridged::BytesVec>) -> Box<CliArgsParser> {
     Box::new(CliArgsParser(cliargsparser::CliArgsParser::new(
         os_str_argv,
     )))
-}
-
-fn do_import(cliargsparser: &CliArgsParser) -> bool {
-    cliargsparser.0.importfile.is_some()
 }
 
 fn do_export(cliargsparser: &CliArgsParser) -> bool {
@@ -120,13 +114,6 @@ fn should_print_usage(cliargsparser: &CliArgsParser) -> bool {
 
 fn refresh_on_start(cliargsparser: &CliArgsParser) -> bool {
     cliargsparser.0.refresh_on_start
-}
-
-fn importfile(cliargsparser: &CliArgsParser, mut output: Pin<&mut PathBuf>) {
-    match &cliargsparser.0.importfile {
-        Some(path) => output.0 = path.to_owned(),
-        None => output.0.clear(),
-    }
 }
 
 fn program_name(cliargsparser: &CliArgsParser) -> String {

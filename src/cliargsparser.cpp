@@ -23,11 +23,6 @@ CliArgsParser::CliArgsParser(int argc, char* argv[])
 {
 }
 
-bool CliArgsParser::do_import() const
-{
-	return newsboat::cliargsparser::bridged::do_import(*rs_object);
-}
-
 bool CliArgsParser::do_export() const
 {
 	return newsboat::cliargsparser::bridged::do_export(*rs_object);
@@ -46,13 +41,6 @@ bool CliArgsParser::do_vacuum() const
 bool CliArgsParser::do_cleanup() const
 {
 	return newsboat::cliargsparser::bridged::do_cleanup(*rs_object);
-}
-
-Filepath CliArgsParser::importfile() const
-{
-	auto output = filepath::bridged::create_empty();
-	newsboat::cliargsparser::bridged::importfile(*rs_object, *output);
-	return output;
 }
 
 std::optional<Filepath> CliArgsParser::readinfo_import_file() const

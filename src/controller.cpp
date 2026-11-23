@@ -49,7 +49,6 @@
 #include "oldreaderapi.h"
 #include "oldreaderurlreader.h"
 #include "opml.h"
-#include "opmlurlreader.h"
 #include "regexmanager.h"
 #include "remoteapi.h"
 #include "remoteapiurlreader.h"
@@ -128,11 +127,6 @@ int Controller::run(const CliArgsParser& args)
 
 	if (!configpaths.create_dirs()) {
 		return EXIT_FAILURE;
-	}
-
-	if (args.do_import()) {
-		LOG(Level::INFO, "Importing OPML file from %s", args.importfile());
-		return import_opml(args.importfile(), configpaths.url_file());
 	}
 
 	LOG(Level::INFO, "nl_langinfo(CODESET): %s", nl_langinfo(CODESET));
@@ -243,7 +237,13 @@ int Controller::run(const CliArgsParser& args)
 	if (type == "local") {
 		urlcfg = std::make_unique<FileUrlReader>(configpaths.url_file());
 	} else if (type == "opml") {
-		urlcfg = std::make_unique<OpmlUrlReader>(cfg, configpaths.url_file());
+		// tachi removed OPML import, including fetching OPML from `opml-url`:
+		// an OPML subscription list could add feeds that run commands.
+		std::cerr << _("Error: OPML import is not supported in tachi "
+				"(urls-source \"opml\" was removed). Use urls-source "
+				"\"local\" and list your feeds in the urls file.")
+			<< std::endl;
+		return EXIT_FAILURE;
 	} else if (type == "oldreader") {
 		api = std::make_unique<OldReaderApi>(cfg);
 		urlcfg = std::make_unique<OldReaderUrlReader>(
@@ -387,14 +387,8 @@ int Controller::run(const CliArgsParser& args)
 		if (type == "local") {
 			msg = strprintf::fmt(
 					_("Error: no URLs configured. Please fill the "
-						"file %s with RSS feed URLs or import an "
-						"OPML file."),
+						"file %s with RSS feed URLs."),
 					configpaths.url_file());
-		} else if (type == "opml") {
-			msg = strprintf::fmt(
-					_("It looks like the OPML feed you subscribed "
-						"contains no feeds. Please fill it with "
-						"feeds, and try again."));
 		} else if (type == "oldreader") {
 			msg = strprintf::fmt(
 					_("It looks like you haven't configured any "
@@ -747,35 +741,6 @@ void Controller::replace_feed(RssFeed& oldfeed, RssFeed& newfeed, unsigned int p
 	v->notify_itemlist_change(feed);
 	if (!unattended) {
 		v->set_feedlist(feedcontainer.get_all_feeds());
-	}
-}
-
-int Controller::import_opml(const Filepath& opmlFile,
-	const Filepath& urlFile)
-{
-	FileUrlReader urlReader(urlFile);
-	const auto error_message = urlReader.reload(); // Load existing URLs
-	if (error_message.has_value()) {
-		std::cerr << strprintf::fmt(
-				_("Error importing OPML to urls file %s: %s"),
-				urlFile, error_message.value().message)
-			<< std::endl;
-		return EXIT_FAILURE;
-	}
-
-	const auto import_error = opml::import(opmlFile, urlReader);
-	if (import_error.has_value()) {
-		std::cerr << strprintf::fmt(
-				_("An error occurred while parsing %s: %s"),
-				opmlFile,
-				import_error.value())
-			<< std::endl;
-		return EXIT_FAILURE;
-	} else {
-		std::cout << strprintf::fmt(
-				_("Import of %s finished."), opmlFile)
-			<< std::endl;
-		return EXIT_SUCCESS;
 	}
 }
 
