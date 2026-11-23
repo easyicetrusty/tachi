@@ -1,0 +1,26 @@
+Fedora packaging patch: Do not build http-test-server by default
+From Fedora's newsboat package (src.fedoraproject.org/rpms/newsboat).
+
+This is a testing utility; addition of this utility is under the same
+banner as other `--with=check` dependencies.
+
+---
+ Cargo.toml | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/Cargo.toml b/Cargo.toml
+index 8a4c61d..5f8050a 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -4,6 +4,8 @@ members = [
+     "rust/libnewsboat-ffi",
+     "rust/strprintf",
+     "rust/regex-rs",
++]
++exclude = [
+     "rust/http-test-server",
+ ]
+ resolver = "3"
+-- 
+2.51.1
+

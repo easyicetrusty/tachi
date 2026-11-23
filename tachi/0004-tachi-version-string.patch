@@ -1,0 +1,23 @@
+Packaging patch for tachi: let the RPM build set the version string.
+
+A release tarball has no .git, so build.rs would fall back to the crate
+version (2.45.0 on master). The tachi spec exports TACHI_VERSION with the
+git describe of the packaged commit instead.
+
+--- a/rust/libnewsboat/build.rs
++++ b/rust/libnewsboat/build.rs
+@@ -1,6 +1,14 @@
+ use std::process::Command;
+ 
+ fn main() {
++    println!("cargo:rerun-if-env-changed=TACHI_VERSION");
++    if let Ok(version) = std::env::var("TACHI_VERSION") {
++        if !version.is_empty() {
++            println!("cargo:rustc-env=NEWSBOAT_VERSION={version}");
++            return;
++        }
++    }
++
+     // Code lifted from https://stackoverflow.com/a/44407625/2350060
+     let command_output = Command::new("git")
+         .args(["describe", "--abbrev=4", "--dirty", "--always", "--tags"])

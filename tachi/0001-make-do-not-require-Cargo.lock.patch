@@ -1,0 +1,30 @@
+Fedora packaging patch: make: do not require Cargo.lock
+From Fedora's newsboat package (src.fedoraproject.org/rpms/newsboat).
+
+Fedora tooling removes the lock file so that we have more wiggle room
+when providing Rust dependencies. The rule does not actually need it.
+
+---
+ Makefile | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index eb98c5e..0006969 100644
+--- a/Makefile
++++ b/Makefile
+@@ -129,10 +129,10 @@ all: doc $(NEWSBOAT) $(PODBOAT) mo-files
+ 
+ NB_DEPS=xlicense.h $(LIB_OUTPUT) $(FILTERLIB_OUTPUT) $(NEWSBOAT_OBJS) $(RSSPPLIB_OUTPUT) $(NEWSBOATLIB_OUTPUT)
+ 
+-$(NEWSBOATLIB_OUTPUT): $(RUST_SRCS) Cargo.lock
++$(NEWSBOATLIB_OUTPUT): $(RUST_SRCS)
+ 	+$(CARGO) build --package libnewsboat-ffi $(CARGO_BUILD_FLAGS)
+ 
+-$(HTTPTESTSEVER_OUTPUT): $(RUST_SRCS) Cargo.lock
++$(HTTPTESTSEVER_OUTPUT): $(RUST_SRCS)
+ 	+$(CARGO) build --package http-test-server $(CARGO_BUILD_FLAGS)
+ 
+ $(NEWSBOAT): $(NB_DEPS)
+-- 
+2.51.1
+

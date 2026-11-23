@@ -1,0 +1,125 @@
+# tachi: a public newsboat fork. This template is filled in by
+# tachi/make-srpm.sh from the packaged git commit. Based on Fedora's
+# newsboat.spec (2.45.1-1.fc45, src.fedoraproject.org/rpms/newsboat).
+# Fedora's changelog history is not repeated here; see that repository.
+%global commit      @COMMIT@
+%global shortcommit @SHORT@
+%global commitdate  @DATE@
+%global gitdescribe @DESCRIBE@
+
+# Not all test dependencies are packaged for fedora
+%bcond check 0
+
+Name:    newsboat
+Version: 2.45.1^%{commitdate}git%{shortcommit}
+Release: 1%{?dist}.tachi1
+Summary: RSS/Atom feed reader for the text console (tachi build)
+
+License: MIT
+URL:     https://www.newsboat.org
+# git archive of the tachi repo at %%{commit} (tachi/make-srpm.sh)
+Source0: newsboat-%{shortcommit}.tar.gz
+
+Patch:  0001-make-do-not-require-Cargo.lock.patch
+Patch:  0002-libnewsboat-relax-requirements.patch
+Patch:  0003-Do-not-build-http-test-server-by-default.patch
+# Version string from TACHI_VERSION, since the tarball has no .git
+Patch:  0004-tachi-version-string.patch
+
+BuildRequires: make
+
+BuildRequires: asciidoctor
+BuildRequires: gcc-c++
+BuildRequires: gettext
+BuildRequires: pkgconfig
+BuildRequires: pkgconfig(json-c) >= 0.11
+BuildRequires: pkgconfig(libcrypto)
+BuildRequires: pkgconfig(libcurl)
+BuildRequires: pkgconfig(libxml-2.0)
+BuildRequires: pkgconfig(ncursesw)
+BuildRequires: pkgconfig(sqlite3)
+BuildRequires: pkgconfig(stfl)
+# Rust parts
+BuildRequires:  git-core
+BuildRequires:  rust-packaging
+
+Obsoletes: newsbeuter < 2.9-29
+
+Provides: podboat = %{version}-%{release}
+
+%description
+Newsboat is a fork of Newsbeuter, an RSS/Atom feed reader for the text console.
+
+This is tachi, a fork of upstream newsboat master with two changes: a fix
+for crashes when the feed list moves during a reload (upstream newsboat
+issue 2101) and faster ignore-article rules (upstream newsboat issue 345).
+tachi is not affiliated with or supported by the newsboat project.
+
+%prep
+%autosetup -n newsboat-%{shortcommit} -p1
+%cargo_prep
+
+%generate_buildrequires
+INTERNAL_CRATES=$'libnewsboat\nlibnewsboat-ffi\nregex-rs\nstrprintf'
+cargo2rpm --path=Cargo.toml buildrequires --all-features %{?with_check:--with-check}|grep -vwe "${INTERNAL_CRATES}"
+
+%build
+# Respect RPM settings
+%set_build_flags
+# Do not fail build because our GCC emits different warnings
+export CFLAGS="-Wno-error ${CFLAGS}" CXXFLAGS="-Wno-error ${CXXFLAGS}"
+# CARGO_BUILD_FLAGS is used/appended to by this Makefile
+export CARGO_BUILD_FLAGS="%{__cargo_common_opts}"
+# Shown by newsboat -v and in the UI title (patch 0004)
+export TACHI_VERSION="%{gitdescribe}-tachi"
+
+# Verify non-rust deps and setup LDFLAGS
+sh config.sh
+
+# Build the project
+# Replace bare `cargo` with the one used by %%cargo_* macros
+%make_build CARGO="%{__cargo}" all %{?with_check:test}
+
+%install
+%make_install prefix="%{_prefix}"
+# Remove executable bit from example/contrib scripts
+find %{buildroot}%{_pkgdocdir}/ -type f -exec chmod -x '{}' +
+
+%find_lang %{name}
+
+%check
+%if %{with check}
+%cargo_test
+%endif
+# Ensure that the tachi version string made it into the binary
+%{buildroot}%{_bindir}/newsboat --version|sed 1q|grep -F "%{gitdescribe}-tachi"
+
+%files -f %{name}.lang
+%license LICENSE
+%doc README.md TACHI.md
+
+%{_bindir}/newsboat
+%{_bindir}/podboat
+
+%{_mandir}/man1/newsboat.1*
+%{_mandir}/man1/podboat.1*
+%{_pkgdocdir}
+%{_datadir}/icons/hicolor/scalable/apps/newsboat.svg
+
+%dir %{_datadir}/fish
+%dir %{_datadir}/fish/vendor_completions.d
+%{_datadir}/fish/vendor_completions.d/newsboat.fish
+
+%dir %{_datadir}/zsh
+%dir %{_datadir}/zsh/site-functions
+%{_datadir}/zsh/site-functions/_newsboat
+
+%changelog
+* @CLDATE@ easyicetrusty <126975333+easyicetrusty@users.noreply.github.com> - 2.45.1^@DATE@git@SHORT@-1.tachi1
+- tachi: build upstream master @DESCRIBE@ with two local changes
+- Fix crashes when the feed list is moved during a reload: lock
+  ListWidgetBackend and Stfl::Form against reload threads (upstream
+  newsboat issue 2101)
+- Apply ignore-article rules once per feed instead of once per item, so
+  loading feeds with many ignore rules is faster (upstream newsboat
+  issue 345)

@@ -1,0 +1,43 @@
+Fedora packaging patch: libnewsboat: relax requirements
+From Fedora's newsboat package (src.fedoraproject.org/rpms/newsboat).
+
+---
+ rust/libnewsboat/Cargo.toml | 6 +++---
+ rust/regex-rs/Cargo.toml    | 2 +-
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/rust/libnewsboat/Cargo.toml b/rust/libnewsboat/Cargo.toml
+index b8d9c3f..8d3320c 100644
+--- a/rust/libnewsboat/Cargo.toml
++++ b/rust/libnewsboat/Cargo.toml
+@@ -17,14 +17,14 @@ unicode-width = "0.2.2"
+ nom = "8"
+ libc = "0.2"
+ natord = "1.0.9"
+-md5 = "0.8.0"
++md5 = "0.7.0"
+ lexopt = "0.3.2"
+-chrono = "0.4.45"
++chrono = "0.4.44"
+ unicode-segmentation = "1.13.3"
+ regex = "1.12.3"
+ 
+ [dependencies.gettext-rs]
+-version = "0.8.0"
++version = ">=0.7.0"
+ # Don't let the crate build its own copy of gettext; force it to use the one
+ # built into glibc.
+ features = [ "gettext-system" ]
+diff --git a/rust/regex-rs/Cargo.toml b/rust/regex-rs/Cargo.toml
+index d8c611f..aeee9f0 100644
+--- a/rust/regex-rs/Cargo.toml
++++ b/rust/regex-rs/Cargo.toml
+@@ -12,4 +12,4 @@ strprintf = { path="../strprintf" }
+ 
+ bitflags = "2.13"
+ libc = ">=0.2.69"
+-gettext-rs = "0.8.0"
++gettext-rs = ">=0.7.0"
+-- 
+2.55.0
+
