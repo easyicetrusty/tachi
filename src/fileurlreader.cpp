@@ -49,6 +49,19 @@ std::optional<utils::ReadTextFileError> FileUrlReader::reload()
 		const std::string url = tokens[0];
 		tokens.erase(tokens.begin());
 
+		// tachi removed exec: and filter: feeds: they run a shell command.
+		if (utils::is_exec_url(url) || utils::is_filter_url(url)) {
+			const std::string err_msg = strprintf::fmt(
+					_("Error: %s line %u: exec: and filter: feeds are not "
+						"supported in tachi; the line is ignored and its "
+						"command is not run."),
+					filename,
+					line_number);
+			LOG(Level::USERERROR, err_msg.c_str());
+			std::cerr << err_msg << std::endl;
+			continue;
+		}
+
 		auto it = std::find_if(feed_urls.begin(), feed_urls.end(),
 		[&url](const FeedUrl& u) {
 			return u.url == url;

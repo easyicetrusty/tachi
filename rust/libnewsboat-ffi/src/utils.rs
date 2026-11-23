@@ -5,11 +5,6 @@ use std::pin::Pin;
 
 #[cxx::bridge(namespace = "newsboat::utils")]
 mod ffi {
-    struct FilterUrlParts {
-        script_name: String,
-        url: String,
-    }
-
     extern "Rust" {
         fn get_random_value(max: u32) -> u32;
         fn is_special_url(url: &str) -> bool;
@@ -23,7 +18,6 @@ mod ffi {
         fn strnaturalcmp(a: &str, b: &str) -> isize;
         fn strwidth(rs_str: &str) -> usize;
         fn strwidth_stfl(rs_str: &str) -> usize;
-        fn extract_filter(line: &str) -> FilterUrlParts;
         fn newsboat_major_version() -> u32;
 
         // This function is wrapped on the Rust side to convert its output type from
@@ -184,14 +178,6 @@ fn strnaturalcmp(a: &str, b: &str) -> isize {
         Ordering::Less => -1,
         Ordering::Equal => 0,
         Ordering::Greater => 1,
-    }
-}
-
-fn extract_filter(line: &str) -> ffi::FilterUrlParts {
-    let result = utils::extract_filter(line);
-    ffi::FilterUrlParts {
-        script_name: result.script_name,
-        url: result.url,
     }
 }
 

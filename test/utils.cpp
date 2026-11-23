@@ -544,40 +544,6 @@ TEST_CASE("get_command_output()", "[utils]")
 	REQUIRE(utils::get_command_output("echo c\" d e") == std::vector<std::uint8_t> {});
 }
 
-TEST_CASE("extract_filter()", "[utils]")
-{
-	{
-		const auto parts =
-			utils::extract_filter("filter:~/bin/script.sh:https://newsboat.org");
-		REQUIRE(std::string(parts.script_name) == "~/bin/script.sh");
-		REQUIRE(std::string(parts.url) == "https://newsboat.org");
-	}
-
-	{
-		const auto parts = utils::extract_filter("filter::https://newsboat.org");
-		REQUIRE(std::string(parts.script_name) == "");
-		REQUIRE(std::string(parts.url) == "https://newsboat.org");
-	}
-
-	{
-		const auto parts = utils::extract_filter("filter:https://newsboat.org");
-		REQUIRE(std::string(parts.script_name) == "https");
-		REQUIRE(std::string(parts.url) == "//newsboat.org");
-	}
-
-	{
-		const auto parts = utils::extract_filter("filter:foo:");
-		REQUIRE(std::string(parts.script_name) == "foo");
-		REQUIRE(std::string(parts.url) == "");
-	}
-
-	{
-		const auto parts = utils::extract_filter("filter:");
-		REQUIRE(std::string(parts.script_name) == "");
-		REQUIRE(std::string(parts.url) == "");
-	}
-}
-
 TEST_CASE("run_program()", "[utils]")
 {
 	const char* argv[4];

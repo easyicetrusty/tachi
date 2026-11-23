@@ -7,6 +7,7 @@
 #include "test_helpers/chmod.h"
 #include "test_helpers/misc.h"
 #include "test_helpers/tempfile.h"
+#include "utils.h"
 
 using namespace newsboat;
 
@@ -70,16 +71,45 @@ TEST_CASE("URL reader keeps track of unique tags", "[FileUrlReader]")
 	REQUIRE(u.get_alltags().size() == 3);
 }
 
-TEST_CASE("Preserves URLs as-is", "[FileUrlReader][issue926]")
+TEST_CASE("Skips an exec: line even when it is full of shell syntax",
+	"[FileUrlReader][issue926][tachi]")
 {
 	const auto testDataPath = "data/926-urls"_path;
 
 	FileUrlReader u(testDataPath);
-	u.reload();
+	REQUIRE_FALSE(u.reload().has_value());
 
-	REQUIRE(u.get_urls().size() == 1);
-	REQUIRE(u.get_urls()[0].url ==
-		R"_(exec:curl --silent https://feeds.metaebene.me/raumzeit/m4a  | sed 's#\(</guid>\|</id>\)#-M4A&#')_");
+	REQUIRE(u.get_urls().size() == 0);
+}
+
+TEST_CASE("URL reader refuses exec: and filter: lines and keeps the others",
+	"[FileUrlReader][tachi]")
+{
+	test_helpers::TempFile urls_file;
+	{
+		std::ofstream f(urls_file.get_path().to_locale_string());
+		f << "https://example.com/feed.xml tag1\n";
+		f << "exec:touch /tmp/tachi-must-not-exist\n";
+		f << "\"filter:touch /tmp/tachi-must-not-exist:https://example.com/f.xml\" tag2\n";
+		f << "\"query:Unread:unread = \\\"yes\\\"\"\n";
+		f << "https://www.youtube.com/feeds/videos.xml?channel_id=UC0123456789\n";
+	}
+
+	FileUrlReader u(urls_file.get_path());
+	REQUIRE_FALSE(u.reload().has_value());
+
+	const auto urls = u.get_urls();
+	REQUIRE(urls.size() == 3);
+	REQUIRE(urls[0].url == "https://example.com/feed.xml");
+	REQUIRE(urls[0].origin.file_origin->line_number == 1);
+	REQUIRE(urls[1].url == "query:Unread:unread = \"yes\"");
+	REQUIRE(urls[1].origin.file_origin->line_number == 4);
+	REQUIRE(urls[2].url ==
+		"https://www.youtube.com/feeds/videos.xml?channel_id=UC0123456789");
+	for (const auto& u : urls) {
+		REQUIRE_FALSE(utils::is_exec_url(u.url));
+		REQUIRE_FALSE(utils::is_filter_url(u.url));
+	}
 }
 
 TEST_CASE("URL reader returns error structure if file cannot be opened",

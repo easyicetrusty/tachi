@@ -36,9 +36,8 @@ rsspp::Feed FeedRetriever::retrieve(const std::string& uri)
 {
 	/*
 	 *	- http:// and https:// URLs are downloaded and parsed regularly
-	 *	- exec: URLs are executed and their output is parsed
-	 *	- filter: URLs are downloaded, executed, and their output is
-	 *parsed
+	 *	- exec: and filter: URLs are refused: tachi removed them because
+	 *	  they run a shell command
 	 *	- query: URLs are ignored
 	 */
 	const std::string urls_source = cfg.get_configvalue("urls-source");
@@ -67,11 +66,11 @@ rsspp::Feed FeedRetriever::retrieve(const std::string& uri)
 		return fetch_freshrss(uri);
 	} else if (utils::is_http_url(uri)) {
 		return download_http(uri);
-	} else if (utils::is_exec_url(uri)) {
-		return get_execplugin(uri.substr(5, uri.length() - 5));
-	} else if (utils::is_filter_url(uri)) {
-		const auto parts = utils::extract_filter(uri);
-		return download_filterplugin(std::string(parts.script_name), std::string(parts.url));
+	} else if (utils::is_exec_url(uri) || utils::is_filter_url(uri)) {
+		throw strprintf::fmt(
+			_("Error: exec: and filter: feeds are not supported in tachi, "
+				"nothing was run: %s"),
+			uri);
 	} else if (utils::is_query_url(uri)) {
 		return {};
 	} else if (utils::is_file_url(uri)) {
@@ -256,45 +255,6 @@ rsspp::Feed FeedRetriever::download_http(const std::string& uri)
 	LOG(Level::DEBUG,
 		"FeedRetriever::download_http: http URL %s, valid: %s",
 		uri,
-		(f.rss_version != rsspp::Feed::Version::UNKNOWN) ? "true" : "false");
-
-	return f;
-}
-
-rsspp::Feed FeedRetriever::get_execplugin(const std::string& plugin)
-{
-	const auto buf = utils::get_command_output(plugin);
-	const std::string strBuf(buf.begin(), buf.end());
-	rsspp::Parser p;
-	const rsspp::Feed f = p.parse_buffer(strBuf);
-	LOG(Level::DEBUG,
-		"FeedRetriever::get_execplugin: execplugin %s, valid = %s",
-		plugin,
-		(f.rss_version != rsspp::Feed::Version::UNKNOWN) ? "true" : "false");
-
-	return f;
-}
-
-rsspp::Feed FeedRetriever::download_filterplugin(const std::string& filter,
-	const std::string& uri)
-{
-	std::string buf = utils::retrieve_url(uri, cfg);
-
-	const char* argv[4] = {"/bin/sh",
-			"-c",
-			filter.c_str(),
-			nullptr
-		};
-	const std::string result = utils::run_program(argv, buf);
-	LOG(Level::DEBUG,
-		"FeedRetriever::download_filterplugin: output of `%s' is: %s",
-		filter,
-		result);
-	rsspp::Parser p;
-	const rsspp::Feed f = p.parse_buffer(result);
-	LOG(Level::DEBUG,
-		"FeedRetriever::download_filterplugin: filterplugin %s, valid = %s",
-		filter,
 		(f.rss_version != rsspp::Feed::Version::UNKNOWN) ? "true" : "false");
 
 	return f;

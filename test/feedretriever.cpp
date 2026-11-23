@@ -245,38 +245,38 @@ constexpr auto atom_feed_iso_8859_1 =
 	R"(</entry>)"
 	R"(</feed>)";
 
-TEST_CASE("Feed retriever with exec: feed", "[FeedRetriever]")
+TEST_CASE("Feed retriever refuses exec: and filter: feeds and runs nothing",
+	"[FeedRetriever][tachi]")
 {
 	ConfigContainer cfg;
 	auto rsscache = Cache::in_memory(cfg);
 	CurlHandle easyHandle;
 	FeedRetriever feedRetriever(cfg, *rsscache, easyHandle);
 
-	SECTION("Supports reading feed data with cat") {
-		const std::string exec_url = "exec:cat data/atom10_1.xml";
-		const auto feed = feedRetriever.retrieve(exec_url);
-		REQUIRE(feed.items.size() == 3);
+	test_helpers::TempFile marker;
+	const std::string marker_path = marker.get_path().to_locale_string();
+	REQUIRE_FALSE(test_helpers::file_exists(marker.get_path()));
+
+	SECTION("exec:") {
+		const std::string exec_url = strprintf::fmt("exec:touch %s", marker_path);
+		REQUIRE_THROWS_AS(feedRetriever.retrieve(exec_url), std::string);
 	}
 
-	SECTION("Throws on empty feed data") {
-		const std::string exec_url = "exec:cat /dev/null";
-		REQUIRE_THROWS_AS(feedRetriever.retrieve(exec_url), rsspp::Exception);
+	SECTION("filter:") {
+		const std::string filter_url = strprintf::fmt(
+				"filter:touch %s:http://127.0.0.1:1/feed.xml", marker_path);
+		REQUIRE_THROWS_AS(feedRetriever.retrieve(filter_url), std::string);
 	}
 
-	SECTION("Keeps non-utf8 data as-is to allow conversion to utf-8 via libxml") {
-		constexpr auto title_utf8 = u8"Prøve"; // Danish for "test"
-		const auto title_iso_8859_1 = utils::convert_text(title_utf8, "iso-8859-1", "utf-8");
-		auto feed_xml_iso8859_1 = strprintf::fmt(atom_feed_iso_8859_1, title_iso_8859_1);
+	REQUIRE_FALSE(test_helpers::file_exists(marker.get_path()));
+}
 
-		test_helpers::TempFile feed_file;
-		std::ofstream file(feed_file.get_path().to_locale_string());
-		file << feed_xml_iso8859_1;
-		file.close();
+TEST_CASE("Feed retriever still treats query: feeds as local", "[FeedRetriever][tachi]")
+{
+	ConfigContainer cfg;
+	auto rsscache = Cache::in_memory(cfg);
+	CurlHandle easyHandle;
+	FeedRetriever feedRetriever(cfg, *rsscache, easyHandle);
 
-		const std::string exec_url = strprintf::fmt("exec:cat %s",
-				feed_file.get_path().to_locale_string());
-		const auto feed = feedRetriever.retrieve(exec_url);
-		REQUIRE(feed.items.size() == 1);
-		REQUIRE(feed.title == title_utf8);
-	}
+	REQUIRE_NOTHROW(feedRetriever.retrieve("query:Unread:unread = \"yes\""));
 }

@@ -565,14 +565,10 @@ bool FeedListFormAction::open_position_in_browser(unsigned int pos,
 		url = feed->rssurl();
 		type = "rssfeed";
 
-		if (utils::is_exec_url(url)) {
-			v.get_statusline().show_error(_("Cannot open exec feeds in the browser!"));
+		if (utils::is_exec_url(url) || utils::is_filter_url(url)) {
+			v.get_statusline().show_error(
+				_("exec: and filter: feeds are not supported in tachi"));
 			return false;
-		}
-
-		if (utils::is_filter_url(url)) {
-			auto parts = utils::extract_filter(url);
-			url = std::string(parts.url);
 		}
 	} else {
 		// rssurl can't be empty, so if we got to this branch,

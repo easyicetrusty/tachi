@@ -29,8 +29,6 @@ private:
 	rsspp::Feed fetch_freshrss(const std::string& feed_id);
 	rsspp::Feed fetch_feedbin(const std::string& feed_id);
 	rsspp::Feed download_http(const std::string& uri);
-	rsspp::Feed get_execplugin(const std::string& plugin);
-	rsspp::Feed download_filterplugin(const std::string& filter, const std::string& uri);
 	rsspp::Feed parse_file(const newsboat::Filepath& file);
 
 	ConfigContainer& cfg;
