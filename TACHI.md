@@ -1,7 +1,8 @@
 # tachi
 
 tachi is a public fork of [newsboat](https://newsboat.org), the RSS/Atom
-feed reader for the text console. It carries two fixes on top of upstream.
+feed reader for the text console. It carries two fixes on top of upstream
+and removes three features that can run commands from outside data.
 
 Anyone may use this code under newsboat's MIT licence. The upstream
 `LICENSE` file and the authors' copyright notices are kept as they are.
@@ -30,6 +31,24 @@ numbers, not to issues in this repository.
 tachi is now independent software. It does not track upstream newsboat
 and will not be rebased on newer upstream releases. Upstream tags are kept
 for history.
+
+## Removed features
+
+tachi removes features that let a file or a feed from outside run commands
+on your computer. They are gone from the code, not just switched off.
+
+- OPML import. `newsboat -i` and `--import-from-opml` print
+  "Error: OPML import is not supported in tachi" and exit with a failure
+  code. `urls-source "opml"` (with `opml-url`) stops newsboat at start-up
+  with an error. Add feeds by writing their URLs into the urls file.
+  OPML export (`-e`, `--export-to-opml`, `--export-to-opml2`) still works.
+- `exec:` feeds, which ran a shell command and read its output as a feed.
+- `filter:` feeds, which piped a download through a shell command.
+
+A line starting with `exec:` or `filter:` in the urls file is skipped with
+an error that names the file and line, and its command is never run. The
+other feeds load as before. `query:` feeds, http(s) feeds, `browser`,
+macros, `ignore-article` and podboat work as before.
 
 ## Build the RPM
 
