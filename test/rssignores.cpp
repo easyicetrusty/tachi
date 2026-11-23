@@ -1,11 +1,15 @@
 #include "rssignores.h"
 
+#include <memory>
 #include <set>
+#include <string>
+#include <vector>
 
 #include "3rd-party/catch.hpp"
 
 #include "cache.h"
 #include "confighandlerexception.h"
+#include "rssfeed.h"
 #include "rssitem.h"
 
 using namespace newsboat;
@@ -373,5 +377,120 @@ TEST_CASE("RssIgnores::matches() applies a rule only to feeds whose URL "
 		REQUIRE(ignores.matches(&second));
 		second.set_title("Wednesday");
 		REQUIRE(ignores.matches(&second));
+	}
+}
+
+TEST_CASE("RssIgnores::filter_feed() removes items that match `ignore-article` "
+	"rules",
+	"[RssIgnores]")
+{
+	RssIgnores ignores;
+
+	ConfigContainer cfg;
+	auto rsscache = Cache::in_memory(cfg);
+
+	const std::string feedurl = "https://example.com/feed.xml";
+	RssFeed feed(rsscache.get(), feedurl);
+	for (const std::string title : {
+			"Monday news", "Tuesday news", "Weekly digest", "Friday news"
+		}) {
+		auto item = std::make_shared<RssItem>(rsscache.get());
+		item->set_guid(title);
+		item->set_title(title);
+		item->set_feedurl(feedurl);
+		feed.add_item(item);
+	}
+
+	const auto titles = [&feed]() {
+		std::vector<std::string> result;
+		for (const auto& item : feed.items()) {
+			result.push_back(item->title());
+		}
+		return result;
+	};
+	const std::vector<std::string> all_titles = {
+		"Monday news", "Tuesday news", "Weekly digest", "Friday news"
+	};
+
+	SECTION("No rules: the feed is unchanged") {
+		ignores.filter_feed(feed);
+
+		REQUIRE(titles() == all_titles);
+	}
+
+	SECTION("Rules for other feeds are not applied") {
+		ignores.handle_action("ignore-article", {"https://example.org/other.xml", "title =~ \".*\""});
+		ignores.handle_action("ignore-article", {"regex:example\\.org", "title =~ \".*\""});
+
+		ignores.filter_feed(feed);
+
+		REQUIRE(titles() == all_titles);
+	}
+
+	SECTION("Exact URL rule") {
+		ignores.handle_action("ignore-article", {feedurl, "title = \"Monday news\""});
+
+		ignores.filter_feed(feed);
+
+		REQUIRE(titles() == std::vector<std::string> {
+			"Tuesday news", "Weekly digest", "Friday news"
+		});
+	}
+
+	SECTION("`*` rule") {
+		ignores.handle_action("ignore-article", {"*", "title =~ \"news\""});
+
+		ignores.filter_feed(feed);
+
+		REQUIRE(titles() == std::vector<std::string> {"Weekly digest"});
+	}
+
+	SECTION("Regex rule, case-insensitive") {
+		ignores.handle_action("ignore-article", {"regex:^HTTPS://EXAMPLE\\.COM/", "title =~ \"digest\""});
+
+		ignores.filter_feed(feed);
+
+		REQUIRE(titles() == std::vector<std::string> {
+			"Monday news", "Tuesday news", "Friday news"
+		});
+	}
+
+	SECTION("All kinds of rules together; order of remaining items is kept") {
+		ignores.handle_action("ignore-article", {feedurl, "title = \"Monday news\""});
+		ignores.handle_action("ignore-article", {"*", "title = \"Weekly digest\""});
+		ignores.handle_action("ignore-article", {"regex:example\\.com", "title = \"Friday news\""});
+
+		ignores.filter_feed(feed);
+
+		REQUIRE(titles() == std::vector<std::string> {"Tuesday news"});
+		REQUIRE(feed.total_item_count() == 1);
+	}
+
+	SECTION("An item is kept if a rule can't be evaluated for it") {
+		ignores.handle_action("ignore-article", {feedurl, "title = \"Monday news\""});
+		ignores.handle_action("ignore-article", {"*", "no_such_attribute = \"x\""});
+
+		ignores.filter_feed(feed);
+
+		REQUIRE(titles() == std::vector<std::string> {
+			"Tuesday news", "Weekly digest", "Friday news"
+		});
+	}
+
+	SECTION("Gives the same answer as matches() for every item") {
+		ignores.handle_action("ignore-article", {feedurl, "title = \"Monday news\""});
+		ignores.handle_action("ignore-article", {"regex:example", "title =~ \"digest\""});
+
+		std::vector<std::string> expected;
+		for (const auto& item : feed.items()) {
+			if (!ignores.matches(item.get())) {
+				expected.push_back(item->title());
+			}
+		}
+
+		ignores.filter_feed(feed);
+
+		REQUIRE(titles() == expected);
+		REQUIRE(expected == std::vector<std::string> {"Tuesday news", "Friday news"});
 	}
 }

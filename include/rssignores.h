@@ -13,6 +13,8 @@ namespace newsboat {
 
 typedef std::pair<std::string, std::shared_ptr<Matcher>> FeedUrlExprPair;
 
+class RssFeed;
+
 class RssIgnores : public ConfigActionHandler {
 public:
 	RssIgnores() {}
@@ -21,6 +23,7 @@ public:
 		const std::vector<std::string>& params) override;
 	void dump_config(std::vector<std::string>& config_output) const override;
 	bool matches(RssItem* item);
+	void filter_feed(RssFeed& feed);
 	bool matches_lastmodified(const std::string& url);
 	bool matches_resetunread(const std::string& url);
 

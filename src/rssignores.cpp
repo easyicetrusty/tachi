@@ -10,7 +10,9 @@
 #include "confighandlerexception.h"
 #include "configparser.h"
 #include "logger.h"
+#include "matcherexception.h"
 #include "regexowner.h"
+#include "rssfeed.h"
 #include "strprintf.h"
 #include "utils.h"
 
@@ -146,6 +148,24 @@ bool RssIgnores::matches(RssItem* item)
 	}
 
 	return false;
+}
+
+void RssIgnores::filter_feed(RssFeed& feed)
+{
+	std::vector<std::shared_ptr<RssItem>> kept;
+	for (const auto& item : feed.items()) {
+		bool ignored = false;
+		try {
+			ignored = matches(item.get());
+		} catch (const MatcherException&) {
+		}
+		if (!ignored) {
+			kept.push_back(item);
+		}
+	}
+	if (kept.size() != feed.items().size()) {
+		feed.set_items(kept);
+	}
 }
 
 bool RssIgnores::matches_lastmodified(const std::string& url)
