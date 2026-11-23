@@ -4,6 +4,7 @@
 #include <curl/curl.h>
 #include <langinfo.h>
 #include <sys/utsname.h>
+#include <utility>
 
 #include "cache.h"
 #include "config.h"
@@ -42,14 +43,14 @@ void RssIgnores::handle_action(std::string_view action,
 			std::string errorMessage;
 			const std::string pattern = ignore_rssurl.substr(prefix_len,
 					ignore_rssurl.length() - prefix_len);
-			const auto regex = Regex::compile(pattern, REG_EXTENDED | REG_ICASE, errorMessage);
+			auto regex = Regex::compile(pattern, REG_EXTENDED | REG_ICASE, errorMessage);
 			if (regex == nullptr) {
 				throw ConfigHandlerException(strprintf::fmt(
 						_("`%s' is not a valid regular expression: %s"),
 						pattern, errorMessage));
 			}
 
-			regex_ignores.push_back(FeedUrlExprPair(pattern, m));
+			regex_ignores.push_back({pattern, std::move(regex), m});
 		} else {
 			non_regex_ignores.insert({ignore_rssurl, m});
 		}
@@ -89,9 +90,9 @@ void RssIgnores::dump_config(std::vector<std::string>& config_output) const
 	}
 	for (const auto& ign : regex_ignores) {
 		std::string configline = "ignore-article ";
-		configline.append(utils::quote(REGEX_PREFIX + ign.first));
+		configline.append(utils::quote(REGEX_PREFIX + ign.pattern));
 		configline.append(" ");
-		configline.append(utils::quote(ign.second->get_expression()));
+		configline.append(utils::quote(ign.expr->get_expression()));
 		config_output.push_back(configline);
 	}
 	for (const auto& ign_lm : ignores_lastmodified) {
@@ -115,34 +116,40 @@ bool RssIgnores::matches_expr(std::shared_ptr<Matcher> expr, RssItem* item)
 	return false;
 }
 
-bool RssIgnores::matches(RssItem* item)
+std::vector<std::shared_ptr<Matcher>> RssIgnores::rules_for_feed(
+		const std::string& feedurl) const
 {
-	auto search = non_regex_ignores.equal_range(item->feedurl());
+	std::vector<std::shared_ptr<Matcher>> rules;
+
+	auto search = non_regex_ignores.equal_range(feedurl);
 	for (auto itr = search.first; itr != search.second; itr++) {
-		if (matches_expr(itr->second, item)) {
-			return true;
-		}
+		rules.push_back(itr->second);
 	}
 
 	search = non_regex_ignores.equal_range("*");
 	for (auto itr = search.first; itr != search.second; itr++) {
-		if (matches_expr(itr->second, item)) {
-			return true;
-		}
+		rules.push_back(itr->second);
 	}
 
 	for (const auto& ign : regex_ignores) {
-		const std::string pattern = ign.first;
-
 		LOG(Level::DEBUG,
-			"RssIgnores::matches: ign.first = `%s' item->feedurl = `%s'",
-			pattern,
-			item->feedurl());
+			"RssIgnores::rules_for_feed: ign.pattern = `%s' feedurl = `%s'",
+			ign.pattern,
+			feedurl);
 
-		std::string errorMessage;
-		const auto regex = Regex::compile(pattern, REG_EXTENDED | REG_ICASE, errorMessage);
-		const auto matches = regex->matches(item->feedurl(), 1, 0);
-		if (!matches.empty() && matches_expr(ign.second, item)) {
+		if (!ign.regex->matches(feedurl, 1, 0).empty()) {
+			rules.push_back(ign.expr);
+		}
+	}
+
+	return rules;
+}
+
+bool RssIgnores::matches_any(const std::vector<std::shared_ptr<Matcher>>& rules,
+	RssItem* item)
+{
+	for (const auto& rule : rules) {
+		if (matches_expr(rule, item)) {
 			return true;
 		}
 	}
@@ -150,19 +157,39 @@ bool RssIgnores::matches(RssItem* item)
 	return false;
 }
 
+bool RssIgnores::matches(RssItem* item)
+{
+	return matches_any(rules_for_feed(item->feedurl()), item);
+}
+
 void RssIgnores::filter_feed(RssFeed& feed)
 {
+	const auto rules = rules_for_feed(feed.rssurl());
+	if (rules.empty()) {
+		return;
+	}
+
 	std::vector<std::shared_ptr<RssItem>> kept;
 	for (const auto& item : feed.items()) {
 		bool ignored = false;
 		try {
-			ignored = matches(item.get());
-		} catch (const MatcherException&) {
+			ignored = matches_any(rules, item.get());
+		} catch (const MatcherException& ex) {
+			LOG(Level::DEBUG,
+				"RssIgnores::filter_feed: Matcher exception: %s",
+				ex.what());
 		}
-		if (!ignored) {
+
+		if (ignored) {
+			LOG(Level::INFO,
+				"RssIgnores::filter_feed: ignored article title = `%s' link = `%s'",
+				item->title(),
+				item->link());
+		} else {
 			kept.push_back(item);
 		}
 	}
+
 	if (kept.size() != feed.items().size()) {
 		feed.set_items(kept);
 	}

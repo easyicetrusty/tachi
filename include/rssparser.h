@@ -50,9 +50,6 @@ private:
 		const rsspp::Item& item);
 	std::string get_guid(const rsspp::Item& item) const;
 
-	void add_item_to_feed(std::shared_ptr<RssFeed> feed,
-		std::shared_ptr<RssItem> item);
-
 	void handle_content_encoded(std::shared_ptr<RssItem> x,
 		const rsspp::Item& item) const;
 	void handle_itunes_summary(std::shared_ptr<RssItem> x,

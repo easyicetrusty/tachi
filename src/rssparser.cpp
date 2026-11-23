@@ -283,7 +283,11 @@ void RssParser::fill_feed_items(std::shared_ptr<RssFeed> feed,
 			static_cast<int64_t>(x->pubDate_timestamp()),
 			x->description().text);
 
-		add_item_to_feed(feed, x);
+		feed->add_item(x);
+	}
+
+	if (ign != nullptr) {
+		ign->filter_feed(*feed);
 	}
 }
 
@@ -437,30 +441,6 @@ void RssParser::set_item_enclosure(std::shared_ptr<RssItem> x,
 	LOG(Level::DEBUG,
 		"RssParser::parse: found enclosure_type: %s",
 		enclosure_type);
-}
-
-void RssParser::add_item_to_feed(std::shared_ptr<RssFeed> feed,
-	std::shared_ptr<RssItem> item)
-{
-	// only add item to feed if it isn't on the ignore list or if there is
-	// no ignore list
-	if (!ign || !ign->matches(item.get())) {
-		feed->add_item(item);
-		LOG(Level::INFO,
-			"RssParser::parse: added article title = `%s' link = "
-			"`%s' "
-			"ign = %p",
-			item->title(),
-			item->link(),
-			ign);
-	} else {
-		LOG(Level::INFO,
-			"RssParser::parse: ignored article title = `%s' link "
-			"= "
-			"`%s'",
-			item->title(),
-			item->link());
-	}
 }
 
 void RssParser::handle_content_encoded(std::shared_ptr<RssItem> x,

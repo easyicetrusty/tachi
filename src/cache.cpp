@@ -643,24 +643,7 @@ std::shared_ptr<RssFeed> Cache::internalize_rssfeed(std::string rssurl,
 	}
 
 	if (ign != nullptr) {
-		auto& items = feed->items();
-		items.erase(
-			std::remove_if(
-				items.begin(),
-				items.end(),
-		[&](std::shared_ptr<RssItem> item) -> bool {
-			try
-			{
-				return ign->matches(item.get());
-			} catch (const MatcherException& ex)
-			{
-				LOG(Level::DEBUG,
-					"oops, Matcher exception: %s",
-					ex.what());
-				return false;
-			}
-		}),
-		items.end());
+		ign->filter_feed(*feed);
 	}
 
 	const unsigned int max_items = cfg.get_configvalue_as_int("max-items");
